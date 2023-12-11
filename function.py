@@ -1,8 +1,11 @@
+import pickle
 import json
 import socket
 from multiprocessing import Process, Queue
 import time
 from datetime import datetime, timedelta
+
+
 HOST = 'localhost'
 PORT = 1080
 
@@ -25,10 +28,11 @@ class Worker(Process):
             if not data:
                 wk_socket.close()
                 break
-            json_data = json.loads(data.decode('UTF-8'))
+            json_data = pickle.loads(data)
             received_data.append(json_data)
+            self.dt_queue.put(received_data)
+            print('Receiving ...', json_data)
 
-        self.dt_queue.put(received_data)
 
 
 class Master(Process):
@@ -42,28 +46,29 @@ class Master(Process):
         """
         Запуск процесса master
         """
-        self.metrics_counts()
+        while True:
+            self.metrics_counts()
         # if data:
         #     self.terminate()
 
     def metrics_counts(self):
         """ """
         data = self.get_data()
-        while len(data):
-            result = self.my_interval(data)
-            self.to_json(result)
+        print('-----', data)
+        result = self.my_interval(data)
+        print(result)
+        self.to_json(result)
 
     def get_data(self):
         """
         Агрегация данных от worker
         :return: полученные данные
         """
-        received_data = []
-        while not self.dt_queue.empty():
-            data = self.dt_queue.get()
-            received_data.append(data)
-            time.sleep(10)
-        return received_data
+
+        time.sleep(3)
+        data = self.dt_queue.get()
+        print(type(data))
+        return data
 
     # def terminate(self) -> None:
     #     """ Завершение процессов """
@@ -79,7 +84,7 @@ class Master(Process):
             file.write(json.dumps(data))
 
     @staticmethod
-    def my_interval(received_data: list):
+    def my_interval(received_data):
         result = []
         short_interval = datetime.now()
        # long_interval = datetime.now()
@@ -113,7 +118,7 @@ class Master(Process):
                 start_dict['A1_sum'] += d.get('A1', 0)
                 start_dict['A2_max'] = max(start_dict['A2_max'], d.get('A2', 0))
                 start_dict['A3_min'] = min(start_dict['A3_min'], d.get('A3', float('inf')))
-                time.sleep(10)
+                time.sleep(3)
             result.append(start_dict)
         return result
 
@@ -124,6 +129,4 @@ def main():
     master = Master(dt_queue)
     worker.start()
     master.start()
-
-
 
