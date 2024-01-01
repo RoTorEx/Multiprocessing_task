@@ -17,3 +17,9 @@ def get_metrics(messages: list[dict], count_type: str) -> dict:
         if message["A3"] < metrics["A3_min"]:
             metrics["A3_min"] = message["A3"]
     return metrics
+
+
+def write_metrics(metrics: dict) -> None:
+    with open("metrics.txt", "a", encoding="utf-8") as f:
+        json.dump(metrics, f, ensure_ascii=False)
+        f.write("\n")
